@@ -39,7 +39,7 @@ class _ScanPageState extends State<ScanPage> {
         ),
         overlay: const QRScannerOverlay(
          overlayColour: Color.fromARGB(30, 0, 0, 0),
-        )
+        ),
       ),
       floatingActionButton: IconButton(onPressed: () {
         setState(() {
