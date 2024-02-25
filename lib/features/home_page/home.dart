@@ -66,10 +66,24 @@ class _HomePageState extends State<HomePage> {
           ],
         ),
       ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: _openCamera,
-        tooltip: 'Increment',
-        child: const Icon(Icons.camera_alt),
+      floatingActionButton: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+        mainAxisSize: MainAxisSize.max,
+        children: [
+          FloatingActionButton(
+            onPressed: _openCamera,
+            tooltip: 'Open camera',
+            child: const Icon(Icons.camera_alt),
+
+          ),
+          FloatingActionButton(
+            onPressed: () {
+              Navigator.of(context).pushNamed("/scanNFC");
+            },
+            tooltip: 'Open NFC',
+            child: const Icon(Icons.nfc),
+          ),
+        ],
       ),
       floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
     );

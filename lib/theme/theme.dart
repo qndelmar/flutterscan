@@ -18,7 +18,8 @@ final dartTheme = ThemeData(
       bodyMedium:  TextStyle(
           color: Colors.white,
           fontWeight: FontWeight.w400,
-          fontSize: 20
+          fontSize: 20,
+
       ),
     ),
     scaffoldBackgroundColor: const Color.fromARGB(255, 31, 31, 31)

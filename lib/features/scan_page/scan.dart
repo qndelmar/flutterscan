@@ -29,7 +29,7 @@ class _ScanPageState extends State<ScanPage> {
             setState(() {
               controller?.stop();
             });
-            Navigator.of(context).pushNamed('/info', arguments: capture.barcodes[0].rawValue);
+            Navigator.of(context).pushNamed('/info', arguments: capture.barcodes[0]);
         },
         fit: BoxFit.contain,
         scanWindow: Rect.fromCenter(

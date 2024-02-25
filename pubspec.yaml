@@ -32,6 +32,8 @@ dependencies:
     sdk: flutter
   permission_handler: ^8.0.0+2
   mobile_scanner: ^4.0.0
+  nfc_manager: ^3.3.0
+  fluttertoast: ^8.2.4
 
 
   # The following adds the Cupertino Icons font to your application.
