@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:barcode_reader/theme/theme.dart';
 import 'package:flutter/material.dart';
 import 'package:nfc_manager/nfc_manager.dart';
@@ -11,17 +13,16 @@ class NFCInfo extends StatefulWidget {
 }
 
 class _NFCInfoState extends State<NFCInfo> {
-  NfcTag? tag;
+  NdefMessage? tag;
   String technologies = "";
   @override
   Future<void> didChangeDependencies() async {
     final args = ModalRoute.of(context)?.settings.arguments;
-    assert(args != null && args is NfcTag, 'You must provide args with type BarcodeCapture');
-    tag = args as NfcTag;
-    for(var i in tag!.data.keys) {
-      technologies += "$i, ";
-    }
-    technologies = _formatStringValue(technologies);
+    assert(args != null && args is NdefMessage, 'You must provide args with type BarcodeCapture');
+    tag = args as NdefMessage;
+    var payload = tag!.records[0].payload;
+    var sub = payload.sublist(payload[0]+ 1);
+    technologies = String.fromCharCodes(sub);
     setState(() { });
     super.didChangeDependencies();
   }
@@ -32,7 +33,7 @@ class _NFCInfoState extends State<NFCInfo> {
       body: technologies != ""
           ?
       Center(
-        child: Text("Поддерживаются: $technologies",
+        child: Text("Первая запись NDEF: $technologies",
         style: dartTheme.textTheme.bodyMedium,
         textAlign: TextAlign.center,))
           :
@@ -43,9 +44,3 @@ class _NFCInfoState extends State<NFCInfo> {
   }
 }
 
-String _formatStringValue(String tech){
-  var technologiesArray = tech.split("");
-  technologiesArray.removeAt(tech.lastIndexOf(","));
-  tech = technologiesArray.join("");
-  return tech;
-}

@@ -1,6 +1,9 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:fluttertoast/fluttertoast.dart';
 import 'package:nfc_manager/nfc_manager.dart';
+import 'package:nfc_manager/platform_tags.dart';
 
 
 class NFCScanPage extends StatefulWidget {
@@ -14,6 +17,12 @@ class _NFCScanPageState extends State<NFCScanPage> {
   String? valueText;
 
   @override
+  void dispose(){
+    NfcManager.instance.stopSession();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     return Scaffold(
       body: SafeArea(
@@ -24,12 +33,24 @@ class _NFCScanPageState extends State<NFCScanPage> {
           mainAxisSize: MainAxisSize.max,
           children: [
             ElevatedButton( child: const Text('Tag Read'), onPressed: (){
-              _showToast();
+              _showToast("Приложите карту к крышке");
               NfcManager.instance.startSession(onDiscovered: (NfcTag tag) async {
-
-                  Navigator.of(context).pushNamed('/nfcInfo', arguments: tag);
-                  NfcManager.instance.stopSession();
+                try {
+                  Ndef? ndef = Ndef.from(tag);
+                  if (ndef != null) {
+                    NdefMessage? msg = await ndef.read();
+                    if(context.mounted) {
+                      Navigator.of(context).pushNamed("/nfcInfo", arguments: msg);
+                    }
+                  } else {
+                    _showToast("Тег не поддерживается");
+                  }
+                } catch (_) {
+                  _showToast("Тег не поддерживается");
+                  return;
+                }
               });
+
             }),
             ElevatedButton(child: const Text('Tag Write'), onPressed: (){
               showDialog(
@@ -51,11 +72,17 @@ class _NFCScanPageState extends State<NFCScanPage> {
                           textColor: Colors.white,
                           child: const Text('Write'),
                           onPressed: () {
-                            _showToast();
+                            _showToast("Приложите карту к крышке");
                             NfcManager.instance.startSession(onDiscovered: (NfcTag tag) async {
                               Navigator.pop(context);
-                              //TODO WHEN ADDITIONAL INFO
-                              NfcManager.instance.stopSession();
+                              final ndef = Ndef.from(tag);
+                              final formattable = NdefFormatable.from(tag);
+                              final message = NdefMessage([NdefRecord.createText(valueText!)]);
+                              if (ndef != null) {
+                                await ndef.write(message);
+                              } else if (formattable != null) {
+                                await formattable.format(message);
+                              }
                             });
                           },
                         ),
@@ -71,13 +98,14 @@ class _NFCScanPageState extends State<NFCScanPage> {
   }
 }
 
-void _showToast(){
+void _showToast(String mesg){
   Fluttertoast.showToast(
-    msg: "Приложите карту к крышке телефона",
+    msg: mesg,
     toastLength: Toast.LENGTH_SHORT,
     textColor: Colors.black,
     fontSize: 16,
     backgroundColor: Colors.grey[200],
   );
 }
+
 
