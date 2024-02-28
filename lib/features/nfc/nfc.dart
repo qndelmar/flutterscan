@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 import 'package:fluttertoast/fluttertoast.dart';
@@ -32,24 +33,14 @@ class _NFCScanPageState extends State<NFCScanPage> {
           direction: Axis.horizontal,
           mainAxisSize: MainAxisSize.max,
           children: [
-            ElevatedButton( child: const Text('Tag Read'), onPressed: (){
+            ElevatedButton( child: const Text('Tag Read'), onPressed: ()async{
               _showToast("Приложите карту к крышке");
-              NfcManager.instance.startSession(onDiscovered: (NfcTag tag) async {
                 try {
-                  Ndef? ndef = Ndef.from(tag);
-                  if (ndef != null) {
-                    NdefMessage? msg = await ndef.read();
-                    if(context.mounted) {
-                      Navigator.of(context).pushNamed("/nfcInfo", arguments: msg);
-                    }
-                  } else {
-                    _showToast("Тег не поддерживается");
-                  }
+                    await _readSector(context);
                 } catch (_) {
                   _showToast("Тег не поддерживается");
                   return;
                 }
-              });
 
             }),
             ElevatedButton(child: const Text('Tag Write'), onPressed: (){
@@ -73,17 +64,12 @@ class _NFCScanPageState extends State<NFCScanPage> {
                           child: const Text('Write'),
                           onPressed: () {
                             _showToast("Приложите карту к крышке");
-                            NfcManager.instance.startSession(onDiscovered: (NfcTag tag) async {
-                              Navigator.pop(context);
-                              final ndef = Ndef.from(tag);
-                              final formattable = NdefFormatable.from(tag);
-                              final message = NdefMessage([NdefRecord.createText(valueText!)]);
-                              if (ndef != null) {
-                                await ndef.write(message);
-                              } else if (formattable != null) {
-                                await formattable.format(message);
-                              }
-                            });
+                            if (valueText?.length != 13) {
+                              _showToast("message must contain 13 symbols (numbers or letters)");
+                              return;
+                            }
+                            _writeToMifare(valueText!);
+                            Navigator.pop(context);
                           },
                         ),
                       ],
@@ -106,6 +92,52 @@ void _showToast(String mesg){
     fontSize: 16,
     backgroundColor: Colors.grey[200],
   );
+}
+
+void _writeToMifare(String msg) {
+  NfcManager.instance.startSession(onDiscovered: (NfcTag tag) async {
+    MifareClassic? mfare = MifareClassic.from(tag);
+    if(mfare == null) {
+      return;
+    }
+    bool isAuth = await _authToMifare(mfare);
+    if(isAuth == true) {
+      NdefRecord rec = NdefRecord.createText(msg);
+      await mfare.writeBlock(blockIndex: 8, data: rec.payload);
+    }});
+}
+
+Future<bool> _authToMifare(MifareClassic mfare) async {
+  var listKeyDefault = [0xD3,0xF7,0xD3,0xF7,0xD3,0xF7];
+  var listKeyDefaultB = [0xFF,0xFF,0xFF,0xFF,0xFF,0xFF];
+  var dataKeyDefault = Uint8List.fromList(listKeyDefault);
+  var dataKeyDefaultB = Uint8List.fromList(listKeyDefaultB);
+  bool? isAuth = await mfare.authenticateSectorWithKeyA(sectorIndex: 2, key: dataKeyDefault);
+  bool? isAuthB = await mfare.authenticateSectorWithKeyB(sectorIndex: 2, key: dataKeyDefaultB);
+  return isAuth == true && isAuthB == true;
+}
+Future<void> _readSector(BuildContext context) async {
+  Uint8List? list;
+  NfcManager.instance.startSession(onDiscovered: (NfcTag tag) async {
+    MifareClassic? mfare = MifareClassic.from(tag);
+    if(mfare == null) {
+      return;
+    }
+    bool isAuth = await _authToMifare(mfare);
+    if(isAuth == true) {
+      list = await mfare.readBlock(blockIndex: 8);
+      if(!context.mounted || list == null) {
+        return;
+      }
+      // ТОЛЬКО ДЛЯ УНИФИКАЦИИ ФОРМАТА NFCINFO. НЕ ДЛЯ ПРОДАКШЕНА
+      NdefMessage msg = NdefMessage(
+          [NdefRecord(
+              typeNameFormat: NdefTypeNameFormat.unknown,
+              type: Uint8List.fromList([]),
+              identifier: Uint8List.fromList([]),
+              payload: list!)]);
+      Navigator.of(context).pushNamed("/nfcInfo", arguments: msg);
+    }});
 }
 
 
